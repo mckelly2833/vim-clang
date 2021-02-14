@@ -1093,6 +1093,9 @@ func! s:ClangCompleteInit(force)
     " Automatically resize preview window after completion.
     " Default assume preview window is above of the editing window.
     au CompleteDone <buffer> call <SID>ShrinkPrevieWindow()
+    if has("patch-8.2.2426")
+        au CompleteDone <buffer> if ! empty(b:clang_cache['diagnostics']) && b:clang_state['state'] == 'ready' | call <SID>DiagnosticsWindowOpen(expand('%:p:.'), b:clang_cache['diagnostics']) | endif
+    endif
   else
     let b:clang_isCompleteDone_0 = 0
     au CursorMovedI <buffer>
@@ -1298,8 +1301,21 @@ func! s:ClangSyntaxCheck(root, clang_options)
   let l:src = join(getline(1, '$'), "\n")
   let l:command = printf('%s -fsyntax-only %s -', g:clang_exec, a:clang_options)
   call s:PDebug("ClangSyntaxCheck::command", l:command)
-  let l:clang_output = system(l:command, l:src)
-  call s:DiagnosticsWindowOpen(expand('%:p:.'), split(l:clang_output, '\n'))
+
+  echo "ClangSyntaxCheck ..."
+  silent let l:clang_output = system(l:command, l:src)
+  redraw!
+  echo " "
+  if empty(l:clang_output)
+      redraw!
+      echo "Syntax ok ..."
+      sleep 851m
+      redraw!
+      echo " "
+  else
+      call s:DiagnosticsWindowOpen(expand('%:p:.'), split(l:clang_output, '\n'))
+  endif
+
   if l:localdir
     silent exe 'lcd ' . l:cwd
   else
@@ -1404,11 +1420,14 @@ func! s:ClangComplete(findstart, base)
     let b:clang_cache['completions'] = s:ParseCompletionResult(b:clang_state['stdout'], l:base)
     " close preview window if empty or has no preview window above, may above
     " other windows...
-    if empty(b:clang_cache['completions']) || !s:HasPreviewAbove()
+    " since vim 8.2.2486 cannot change windows in completefunc -
+    if !has("patch-8.2.2426") && (empty(b:clang_cache['completions']) || !s:HasPreviewAbove())
       pclose
     endif
     " call to show diagnostics
-    call s:DiagnosticsWindowOpen(expand('%:p:.'), b:clang_cache['diagnostics'])
+    if !has("patch-8.2.2426")
+        call s:DiagnosticsWindowOpen(expand('%:p:.'), b:clang_cache['diagnostics'])
+    endif
     return l:start
   else
     call s:PDebug("ClangComplete", "phase 2")
