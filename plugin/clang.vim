@@ -856,15 +856,23 @@ func! s:SetNeomakeMakerArguments(clang_options, clang_root)
   endif
 endf
 "}}}
-"{{{ s:ShrinkPrevieWindow
+"{{{ s:OpenDiagAndShrinkPreviewWindow
 " Shrink preview window to fit lines.
 " Assume cursor is in the editing window, and preview window is above of it.
 " Global variable
 "   g:clang_pwheight
 "   g:clang_statusline
-func! s:ShrinkPrevieWindow()
+func! s:OpenDiagAndShrinkPreviewWindow()
   if &completeopt !~ 'preview'
     return
+  endif
+
+  if has("patch-8.2.2426")
+    if exists('b:clang_cache') && exists('b:clang_state')
+      if ! empty(b:clang_cache['diagnostics']) && b:clang_state['state'] == 'ready'
+        call <SID>DiagnosticsWindowOpen(expand('%:p:.'), b:clang_cache['diagnostics'])
+      endif
+    endif
   endif
 
   "current view
@@ -882,7 +890,7 @@ func! s:ShrinkPrevieWindow()
     endif
     let l:height = min([line('$'), g:clang_pwheight])
     exe 'resize ' . l:height
-    call s:PDebug("s:ShrinkPrevieWindow::height", l:height)
+    call s:PDebug("s:OpenDiagAndShrinkPreviewWindow::height", l:height)
     if l:cft != &filetype
       exe 'set filetype=' . l:cft
       setl nobuflisted
@@ -1092,15 +1100,12 @@ func! s:ClangCompleteInit(force)
     au CompleteDone <buffer> call <SID>PDebug("##CompleteDone", "triggered")
     " Automatically resize preview window after completion.
     " Default assume preview window is above of the editing window.
-    au CompleteDone <buffer> call <SID>ShrinkPrevieWindow()
-    if has("patch-8.2.2426")
-        au CompleteDone <buffer> if ! empty(b:clang_cache['diagnostics']) && b:clang_state['state'] == 'ready' | call <SID>DiagnosticsWindowOpen(expand('%:p:.'), b:clang_cache['diagnostics']) | endif
-    endif
+    au CompleteDone <buffer> call <SID>OpenDiagAndShrinkPreviewWindow()
   else
     let b:clang_isCompleteDone_0 = 0
     au CursorMovedI <buffer>
           \ if b:clang_isCompleteDone_0 |
-          \   call <SID>ShrinkPrevieWindow() |
+          \   call <SID>OpenDiagAndShrinkPreviewWindow() |
           \   let b:clang_isCompleteDone_0 = 0 |
           \ endif
   endif
