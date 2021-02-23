@@ -867,11 +867,10 @@ func! s:OpenDiagAndShrinkPreviewWindow()
     return
   endif
 
-  if has("patch-8.2.2426")
-    if exists('b:clang_cache') && exists('b:clang_state')
-      if ! empty(b:clang_cache['diagnostics']) && b:clang_state['state'] == 'ready'
-        call <SID>DiagnosticsWindowOpen(expand('%:p:.'), b:clang_cache['diagnostics'])
-      endif
+  " call to show diagnostics
+  if exists('b:clang_cache') && exists('b:clang_state')
+    if ! empty(b:clang_cache['diagnostics']) && b:clang_state['state'] == 'ready'
+      call <SID>DiagnosticsWindowOpen(expand('%:p:.'), b:clang_cache['diagnostics'])
     endif
   endif
 
@@ -1428,10 +1427,6 @@ func! s:ClangComplete(findstart, base)
     " since vim 8.2.2486 cannot change windows in completefunc -
     if !has("patch-8.2.2426") && (empty(b:clang_cache['completions']) || !s:HasPreviewAbove())
       pclose
-    endif
-    " call to show diagnostics
-    if !has("patch-8.2.2426")
-        call s:DiagnosticsWindowOpen(expand('%:p:.'), b:clang_cache['diagnostics'])
     endif
     return l:start
   else
