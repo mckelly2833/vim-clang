@@ -1306,6 +1306,9 @@ func! s:ClangSyntaxCheck(root, clang_options)
   let l:command = printf('%s -fsyntax-only %s -', g:clang_exec, a:clang_options)
   call s:PDebug("ClangSyntaxCheck::command", l:command)
 
+  call s:DiagnosticsPreviewWindowClose()
+  redraw!
+
   echo "ClangSyntaxCheck ..."
   silent let l:clang_output = system(l:command, l:src)
   redraw!
